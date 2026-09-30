@@ -1,0 +1,120 @@
+#!/usr/bin/env zsh
+# agentsemdee: show which agent configuration files apply to a directory.
+#
+# For Claude Code, Codex, and OpenCode it lists every instruction, settings,
+# MCP, and skills location each agent reads, grouped from the broadest scope
+# to the most specific, and says per agent whether the file is loaded.
+
+emulate -R zsh
+setopt extendedglob pipefail
+
+typeset -g AMD_VERSION=0.1.0
+typeset -g AMD_SELF=${${(%):-%x}:A}
+typeset -g AMD_ROOT=${AMD_SELF:h:h}
+
+() {
+  local name
+  for name in core agent-claude agent-codex agent-opencode render redact preview ui; do
+    source $AMD_ROOT/lib/$name.zsh
+  done
+}
+
+amd_usage() {
+  print -r -- "agentsemdee $AMD_VERSION
+Show the agent configuration that applies to a directory.
+
+Usage: agentsemdee [options] [directory]
+
+  -a, --all      also list locations the agents read that do not exist yet
+  -p, --plain    print the table instead of opening the viewer
+      --tsv      print one tab-separated line per file, with reasons
+  -h, --help     show this help
+  -V, --version  show the version
+
+Without a directory, the current one is inspected. When output is not a
+terminal, the table is printed instead of opening the viewer.
+
+Columns: C Claude Code, X Codex, O OpenCode.
+  ● loaded    ○ present, not loaded    · read if created (with --all)"
+}
+
+# Put the fzf, bat, and jq versions pinned in this project's mise.toml first
+# on PATH, so the tool behaves the same from any directory. Done once: the
+# viewer's subprocesses inherit the result.
+amd_tool_paths() {
+  emulate -L zsh
+  setopt extendedglob
+  [[ -n ${AGENTSEMDEE_TOOLS_READY:-} ]] && return 0
+  export AGENTSEMDEE_TOOLS_READY=1
+  (( $+commands[mise] )) || return 0
+  local -a dirs
+  dirs=(${(f)"$(command mise -C $AMD_ROOT bin-paths 2>/dev/null)"})
+  dirs=(${(M)dirs:#*/installs/(fzf|bat|jq)/*})
+  (( ${#dirs} )) && path=($dirs $path)
+  return 0
+}
+
+amd_main() {
+  emulate -L zsh
+  setopt extendedglob
+  local mode='' all=0 dir='' arg=''
+  while (( $# )); do
+    case $1 in
+      -a|--all)     all=1 ;;
+      -p|--plain)   mode=plain ;;
+      --tsv)        mode=tsv ;;
+      -h|--help)    amd_usage; return 0 ;;
+      -V|--version) print -r -- "agentsemdee $AMD_VERSION"; return 0 ;;
+      # The next four are how the viewer calls back into this script.
+      --rows)       mode=rows ;;
+      --toggle-all) amd_toggle_all; return 0 ;;
+      --preview)    mode=preview; arg=${2:-}; (( $# > 1 )) && shift ;;
+      --open)       mode=open; arg=${2:-}; (( $# > 1 )) && shift ;;
+      --)           shift; (( $# )) && dir=$1; break ;;
+      -*)           print -u2 -r -- "agentsemdee: unknown option: $1"; amd_usage >&2; return 2 ;;
+      *)            dir=$1 ;;
+    esac
+    shift
+  done
+
+  if [[ $mode == open ]]; then
+    amd_open $arg
+    return 0
+  fi
+
+  amd_tool_paths
+  if [[ $mode == (rows|preview) ]]; then
+    dir=${AGENTSEMDEE_DIR:-$PWD}
+  fi
+  amd_init_context ${dir:-$PWD} || return 1
+
+  case $mode in
+    preview)
+      amd_preview $arg
+      return 0 ;;
+    rows)
+      amd_detect_versions
+      amd_colors on
+      amd_collect
+      amd_emit rows $all
+      return 0 ;;
+  esac
+
+  amd_detect_versions
+  if [[ -z $mode ]]; then
+    if [[ -t 0 && -t 1 ]]; then
+      amd_ui $all
+      return $?
+    fi
+    mode=plain
+  fi
+  if [[ $mode == plain && -t 1 && -z ${NO_COLOR:-} ]]; then
+    amd_colors on
+  else
+    amd_colors off
+  fi
+  amd_collect
+  amd_emit $mode $all
+}
+
+amd_main "$@"

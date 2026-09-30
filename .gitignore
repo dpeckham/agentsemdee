@@ -1,0 +1,17 @@
+# macOS
+.DS_Store
+
+# Editors
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# mise: machine-local overrides
+mise.local.toml
+.mise.local.toml
+
+# Personal agent files, meant to stay out of git
+CLAUDE.local.md
+.claude/settings.local.json

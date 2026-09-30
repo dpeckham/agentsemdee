@@ -1,0 +1,10 @@
+# Tools agentsemdee needs at runtime. `mise install` fetches them.
+# bin/agentsemdee adds these to its own PATH, so it works from any directory.
+[tools]
+fzf = "0.74"
+bat = "0.26"
+jq = "1.8"
+
+[tasks.test]
+description = "Run the discovery and redaction tests"
+run = "zsh test/run.zsh"
