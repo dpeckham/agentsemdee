@@ -35,8 +35,9 @@ It is read-only. It never writes to any configuration file.
 
 ## Install
 
-Tools are managed with [mise](https://mise.jdx.dev). zsh and git come from
-the system.
+Tools are managed with [mise](https://mise.jdx.dev). bash 4.2 or newer and
+git come from the system. macOS ships bash 3.2, so install a newer one there,
+for example with `brew install bash`.
 
 ```sh
 mise install
@@ -146,22 +147,22 @@ repositories that have not been reviewed. Three measures follow from that.
 ## Layout
 
 ```
-bin/agentsemdee         entry point and argument handling
-lib/core.zsh            directory context and the report protocol
-lib/agent-claude.zsh    Claude Code rules
-lib/agent-codex.zsh     Codex rules
-lib/agent-opencode.zsh  OpenCode rules, 1.x and 2.x
-lib/render.zsh          rows, plain table, TSV
-lib/preview.zsh         preview pane
-lib/redact.zsh          secret masking
-lib/ui.zsh              the fzf viewer
-test/run.zsh            tests
+bin/agentsemdee          entry point and argument handling
+lib/core.bash            directory context and the report protocol
+lib/agent-claude.bash    Claude Code rules
+lib/agent-codex.bash     Codex rules
+lib/agent-opencode.bash  OpenCode rules, 1.x and 2.x
+lib/render.bash          rows, plain table, TSV
+lib/preview.bash         preview pane
+lib/redact.bash          secret masking
+lib/ui.bash              the fzf viewer
+test/run.bash            tests
 ```
 
 An agent module calls `amd_report` once per location it knows about, with a
 state and a one-sentence reason. The core merges reports by path, so a file
 that several agents read becomes one row. Adding an agent means adding a
-module, a column letter in `lib/core.zsh`, and tests.
+module, a column letter in `lib/core.bash`, and tests.
 
 ## Test
 
